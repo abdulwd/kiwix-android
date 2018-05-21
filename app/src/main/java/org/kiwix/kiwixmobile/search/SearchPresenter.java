@@ -32,7 +32,8 @@ public class SearchPresenter extends BasePresenter<SearchViewCallback> {
     RecentSearchDao recentSearchDao;
 
     @Inject
-    public SearchPresenter() {}
+    SearchPresenter() {
+    }
 
     @Override
     public void attachView(SearchViewCallback searchViewCallback) {
@@ -40,7 +41,7 @@ public class SearchPresenter extends BasePresenter<SearchViewCallback> {
     }
 
     void getRecentSearches() {
-        getMvpView().addRecentSearches(recentSearchDao.getRecentSearches());
+        view.addRecentSearches(recentSearchDao.getRecentSearches());
     }
 
     void saveSearch(String title) {
