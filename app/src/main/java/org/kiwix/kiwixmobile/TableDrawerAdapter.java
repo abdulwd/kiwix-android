@@ -27,6 +27,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import org.kiwix.kiwixmobile.main.MainActivity;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -83,8 +85,8 @@ public class TableDrawerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         vh.title.setText(title);
       } else {
         String empty = context.getString(R.string.no_section_info);
-        if (context instanceof KiwixMobileActivity) {
-          empty = ((KiwixMobileActivity) context).getCurrentWebView().getTitle();
+        if (context instanceof MainActivity) {
+          empty = ((MainActivity) context).getCurrentWebView().getTitle();
         }
         vh.title.setText(empty);
       }

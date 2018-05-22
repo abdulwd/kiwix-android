@@ -23,9 +23,7 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
 import org.kiwix.kiwixmobile.KiwixErrorActivity;
-import org.kiwix.kiwixmobile.KiwixMobileActivity;
-
-import java.io.Serializable;
+import org.kiwix.kiwixmobile.main.MainActivity;
 
 
 public class SplashActivity extends AppCompatActivity {
@@ -51,7 +49,7 @@ public class SplashActivity extends AppCompatActivity {
       System.exit(10);
     });
 
-    Intent intent = new Intent(this, KiwixMobileActivity.class);
+    Intent intent = new Intent(this, MainActivity.class);
     startActivity(intent);
     finish();
   }

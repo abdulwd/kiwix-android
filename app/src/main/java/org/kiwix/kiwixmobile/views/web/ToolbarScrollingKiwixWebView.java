@@ -24,8 +24,8 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 
-import org.kiwix.kiwixmobile.KiwixMobileActivity;
 import org.kiwix.kiwixmobile.WebViewCallback;
+import org.kiwix.kiwixmobile.main.MainActivity;
 import org.kiwix.kiwixmobile.utils.DimenUtils;
 
 public class ToolbarScrollingKiwixWebView extends KiwixWebView {
@@ -78,7 +78,7 @@ public class ToolbarScrollingKiwixWebView extends KiwixWebView {
         break;
       case MotionEvent.ACTION_MOVE:
         // If we are in fullscreen don't scroll bar
-        if (KiwixMobileActivity.isFullscreenOpened) {
+        if (MainActivity.isFullscreenOpened) {
           return super.onTouchEvent(event);
         }
         // Filter out zooms since we don't want to affect the toolbar when zooming

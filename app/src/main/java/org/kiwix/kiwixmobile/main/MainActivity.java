@@ -17,7 +17,7 @@
  * MA 02110-1301, USA.
  */
 
-package org.kiwix.kiwixmobile;
+package org.kiwix.kiwixmobile.main;
 
 import android.Manifest;
 import android.app.Activity;
@@ -75,7 +75,16 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
+
 import org.json.JSONArray;
+import org.kiwix.kiwixmobile.BuildConfig;
+import org.kiwix.kiwixmobile.KiwixActionBarDrawerToggle;
+import org.kiwix.kiwixmobile.PageBottomTab;
+import org.kiwix.kiwixmobile.R;
+import org.kiwix.kiwixmobile.TabDrawerAdapter;
+import org.kiwix.kiwixmobile.TableDrawerAdapter;
+import org.kiwix.kiwixmobile.WebViewCallback;
+import org.kiwix.kiwixmobile.ZimContentProvider;
 import org.kiwix.kiwixmobile.base.BaseActivity;
 import org.kiwix.kiwixmobile.bookmarks_view.BookmarksActivity;
 import org.kiwix.kiwixmobile.database.BookmarksDao;
@@ -147,167 +156,87 @@ import static org.kiwix.kiwixmobile.utils.Constants.TAG_FILE_SEARCHED;
 import static org.kiwix.kiwixmobile.utils.Constants.TAG_KIWIX;
 import static org.kiwix.kiwixmobile.utils.StyleUtils.dialogStyle;
 
-public class KiwixMobileActivity extends BaseActivity implements WebViewCallback {
+public class MainActivity extends BaseActivity implements WebViewCallback {
 
   public static boolean isFullscreenOpened;
-
-  private boolean isBackToTopEnabled = false;
-
-  private boolean wasHideToolbar = true;
-
-  private boolean isHideToolbar = true;
-
-  private boolean isSpeaking = false;
-
-  protected boolean requestClearHistoryAfterLoad = false;
-
-  protected boolean requestInitAllMenuItems = false;
-
-  private boolean isOpenNewTabInBackground;
-
-  private boolean isExternalLinkPopup;
-
   public static boolean refresh;
-
   public static boolean wifiOnly;
-
-  private static Uri KIWIX_LOCAL_MARKET_URI;
-
-  private static Uri KIWIX_BROWSER_MARKET_URI;
-
-  private String documentParserJs;
-
   public static boolean nightMode;
-
-  private DocumentParser documentParser;
-
-  public List<TableDrawerAdapter.DocumentSection> documentSections;
-
+  private static Uri KIWIX_LOCAL_MARKET_URI;
+  private static Uri KIWIX_BROWSER_MARKET_URI;
+  public List<DocumentSection> documentSections;
   public Menu menu;
-
-  private MenuItem menuBookmarks;
-
-  private ArrayList<String> bookmarks;
-
-  private List<KiwixWebView> mWebViews = new ArrayList<>();
-
-  private KiwixTextToSpeech tts;
-
-  private CompatFindActionModeCallback compatCallback;
-
-  private TabDrawerAdapter tabDrawerAdapter;
-
-  private int currentWebViewIndex = 0;
-
-  private File file;
-
-  private ActionMode actionMode = null;
-
-  private KiwixWebView tempForUndo;
-
-  private RateAppCounter visitCounterPref;
-
-  private int tempVisitCount;
-
-  private boolean isFirstRun;
-
-  @BindView(R.id.toolbar) Toolbar toolbar;
-
-  @BindView(R.id.button_backtotop) Button backToTopButton;
-
-  @BindView(R.id.button_stop_tts) Button stopTTSButton;
-
-  @BindView(R.id.button_pause_tts) Button pauseTTSButton;
-
-  @BindView(R.id.tts_controls) LinearLayout TTSControls;
-
-  @BindView(R.id.toolbar_layout) RelativeLayout toolbarContainer;
-
-  @BindView(R.id.progress_view) AnimatedProgressBar progressBar;
-
-  @BindView(R.id.FullscreenControlButton) ImageButton exitFullscreenButton;
-
-  @BindView(R.id.snackbar_layout) CoordinatorLayout snackbarLayout;
-
-  @BindView(R.id.new_tab_button) RelativeLayout newTabButton;
-
-  @BindView(R.id.drawer_layout) DrawerLayout drawerLayout;
-
-  @BindView(R.id.left_drawer) LinearLayout tabDrawerLeftContainer;
-
-  @BindView(R.id.right_drawer) LinearLayout tableDrawerRightContainer;
-
-  @BindView(R.id.left_drawer_list) RecyclerView tabDrawerLeft;
-
-  @BindView(R.id.right_drawer_list) RecyclerView tableDrawerRight;
-
-  @BindView(R.id.content_frame) FrameLayout contentFrame;
-
-  @BindView(R.id.action_back_button) ImageView tabBackButton;
-
-  @BindView(R.id.action_forward_button) ImageView tabForwardButton;
-
-  @BindView(R.id.action_back) View tabBackButtonContainer;
-
-  @BindView(R.id.action_forward) View tabForwardButtonContainer;
-
-  @BindView(R.id.page_bottom_tab_layout) TabLayout pageBottomTabLayout;
-
-  @Inject OkHttpClient okHttpClient;
-
-  @Inject SharedPreferenceUtil sharedPreferenceUtil;
-
+  protected boolean requestClearHistoryAfterLoad = false;
+  protected boolean requestInitAllMenuItems = false;
+  @BindView(R.id.toolbar)
+  Toolbar toolbar;
+  @BindView(R.id.button_backtotop)
+  Button backToTopButton;
+  @BindView(R.id.button_stop_tts)
+  Button stopTTSButton;
+  @BindView(R.id.button_pause_tts)
+  Button pauseTTSButton;
+  @BindView(R.id.tts_controls)
+  LinearLayout TTSControls;
+  @BindView(R.id.toolbar_layout)
+  RelativeLayout toolbarContainer;
+  @BindView(R.id.progress_view)
+  AnimatedProgressBar progressBar;
+  @BindView(R.id.FullscreenControlButton)
+  ImageButton exitFullscreenButton;
+  @BindView(R.id.snackbar_layout)
+  CoordinatorLayout snackbarLayout;
+  @BindView(R.id.new_tab_button)
+  RelativeLayout newTabButton;
+  @BindView(R.id.drawer_layout)
+  DrawerLayout drawerLayout;
+  @BindView(R.id.left_drawer)
+  LinearLayout tabDrawerLeftContainer;
+  @BindView(R.id.right_drawer)
+  LinearLayout tableDrawerRightContainer;
+  @BindView(R.id.left_drawer_list)
+  RecyclerView tabDrawerLeft;
+  @BindView(R.id.right_drawer_list)
+  RecyclerView tableDrawerRight;
+  @BindView(R.id.content_frame)
+  FrameLayout contentFrame;
+  @BindView(R.id.action_back_button)
+  ImageView tabBackButton;
+  @BindView(R.id.action_forward_button)
+  ImageView tabForwardButton;
+  @BindView(R.id.action_back)
+  View tabBackButtonContainer;
+  @BindView(R.id.action_forward)
+  View tabForwardButtonContainer;
+  @BindView(R.id.page_bottom_tab_layout)
+  TabLayout pageBottomTabLayout;
+  @Inject
+  OkHttpClient okHttpClient;
+  @Inject
+  SharedPreferenceUtil sharedPreferenceUtil;
   @Inject
   BookmarksDao bookmarksDao;
-
-  @Override
-  public void onActionModeStarted(ActionMode mode) {
-    if (actionMode == null) {
-      actionMode = mode;
-      Menu menu = mode.getMenu();
-      // Inflate custom menu icon.
-      getMenuInflater().inflate(R.menu.menu_webview_action, menu);
-      readAloudSelection(menu);
-    }
-    super.onActionModeStarted(mode);
-  }
-
-  @Override
-  public void onActionModeFinished(ActionMode mode) {
-    actionMode = null;
-    super.onActionModeFinished(mode);
-  }
-
-  private void readAloudSelection(Menu menu) {
-    if (menu != null) {
-      menu.findItem(R.id.menu_speak_text)
-          .setOnMenuItemClickListener(item -> {
-            tts.readSelection(getCurrentWebView());
-            if (actionMode != null) {
-              actionMode.finish();
-            }
-            return true;
-          });
-    }
-  }
-
-  @NonNull
-  private final TabLayout.OnTabSelectedListener pageBottomTabListener
-          = new TabLayout.OnTabSelectedListener() {
-    @Override
-    public void onTabSelected(TabLayout.Tab tab) {
-      PageBottomTab.of(tab.getPosition()).select(pageActionTabsCallback);
-    }
-
-    @Override
-    public void onTabUnselected(TabLayout.Tab tab) {}
-
-    @Override
-    public void onTabReselected(TabLayout.Tab tab) {
-      onTabSelected(tab);
-    }
-  };
-
+  private boolean isBackToTopEnabled = false;
+  private boolean wasHideToolbar = true;
+  private boolean isHideToolbar = true;
+  private boolean isSpeaking = false;
+  private boolean isOpenNewTabInBackground;
+  private boolean isExternalLinkPopup;
+  private String documentParserJs;
+  private DocumentParser documentParser;
+  private MenuItem menuBookmarks;
+  private ArrayList<String> bookmarks;
+  private List<KiwixWebView> mWebViews = new ArrayList<>();
+  private KiwixTextToSpeech tts;
+  private CompatFindActionModeCallback compatCallback;
+  private TabDrawerAdapter tabDrawerAdapter;
+  private int currentWebViewIndex = 0;
+  private File file;
+  private ActionMode actionMode = null;
+  private KiwixWebView tempForUndo;
+  private RateAppCounter visitCounterPref;
+  private int tempVisitCount;
+  private boolean isFirstRun;
   private PageBottomTab.Callback pageActionTabsCallback = new PageBottomTab.Callback() {
     @Override
     public void onHomeTabSelected() {
@@ -346,6 +275,67 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
       goToBookmarks();
     }
   };
+  @NonNull
+  private final TabLayout.OnTabSelectedListener pageBottomTabListener
+      = new TabLayout.OnTabSelectedListener() {
+    @Override
+    public void onTabSelected(TabLayout.Tab tab) {
+      PageBottomTab.of(tab.getPosition()).select(pageActionTabsCallback);
+    }
+
+    @Override
+    public void onTabUnselected(TabLayout.Tab tab) {
+    }
+
+    @Override
+    public void onTabReselected(TabLayout.Tab tab) {
+      onTabSelected(tab);
+    }
+  };
+
+  public static void updateWidgets(Context context) {
+    Intent intent = new Intent(context.getApplicationContext(), KiwixSearchWidget.class);
+    intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+    // Use an array and EXTRA_APPWIDGET_IDS instead of AppWidgetManager.EXTRA_APPWIDGET_ID,
+    // since it seems the onUpdate() is only fired on that:
+    AppWidgetManager widgetManager = AppWidgetManager.getInstance(context);
+    int[] ids = widgetManager.getAppWidgetIds(new ComponentName(context, KiwixSearchWidget.class));
+
+    widgetManager.notifyAppWidgetViewDataChanged(ids, android.R.id.list);
+    intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
+    context.sendBroadcast(intent);
+  }
+
+  @Override
+  public void onActionModeStarted(ActionMode mode) {
+    if (actionMode == null) {
+      actionMode = mode;
+      Menu menu = mode.getMenu();
+      // Inflate custom menu icon.
+      getMenuInflater().inflate(R.menu.menu_webview_action, menu);
+      readAloudSelection(menu);
+    }
+    super.onActionModeStarted(mode);
+  }
+
+  @Override
+  public void onActionModeFinished(ActionMode mode) {
+    actionMode = null;
+    super.onActionModeFinished(mode);
+  }
+
+  private void readAloudSelection(Menu menu) {
+    if (menu != null) {
+      menu.findItem(R.id.menu_speak_text)
+          .setOnMenuItemClickListener(item -> {
+            tts.readSelection(getCurrentWebView());
+            if (actionMode != null) {
+              actionMode.finish();
+            }
+            return true;
+          });
+    }
+  }
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -401,12 +391,14 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
     TableDrawerAdapter tableDrawerAdapter = new TableDrawerAdapter();
     tableDrawerRight.setAdapter(tableDrawerAdapter);
     tableDrawerAdapter.setTableClickListener(new TableClickListener() {
-      @Override public void onHeaderClick(View view) {
+      @Override
+      public void onHeaderClick(View view) {
         getCurrentWebView().setScrollY(0);
         drawerLayout.closeDrawer(GravityCompat.END);
       }
 
-      @Override public void onSectionClick(View view, int position) {
+      @Override
+      public void onSectionClick(View view, int position) {
         getCurrentWebView().loadUrl("javascript:document.getElementById('"
             + documentSections.get(position).id
             + "').scrollIntoView();");
@@ -418,7 +410,8 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
     tableDrawerAdapter.notifyDataSetChanged();
 
     tabDrawerAdapter.setTabClickListener(new TabDrawerAdapter.TabClickListener() {
-      @Override public void onSelectTab(View view, int position) {
+      @Override
+      public void onSelectTab(View view, int position) {
         selectTab(position);
 
         /* Bug Fix
@@ -429,7 +422,8 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
         refreshNavigationButtons();
       }
 
-      @Override public void onCloseTab(View view, int position) {
+      @Override
+      public void onCloseTab(View view, int position) {
         closeTab(position);
       }
     });
@@ -452,7 +446,8 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
         tableDrawerAdapter.notifyDataSetChanged();
       }
 
-      @Override public void clearSections() {
+      @Override
+      public void clearSections() {
         documentSections.clear();
         tableDrawerAdapter.notifyDataSetChanged();
       }
@@ -485,15 +480,15 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
       Uri uri = Uri.fromFile(file);
 
       finish();
-      Intent zimFile = new Intent(KiwixMobileActivity.this, KiwixMobileActivity.class);
+      Intent zimFile = new Intent(MainActivity.this, MainActivity.class);
       zimFile.setData(uri);
       startActivity(zimFile);
     }
 
     pageBottomTabLayout.addOnTabSelectedListener(pageBottomTabListener);
 
-    View bookmarkTabView = LayoutInflater.from(KiwixMobileActivity.this)
-            .inflate(R.layout.bookmark_tab, null);
+    View bookmarkTabView = LayoutInflater.from(MainActivity.this)
+        .inflate(R.layout.bookmark_tab, null);
     bookmarkTabView.setOnClickListener(view -> PageBottomTab.of(4).select(pageActionTabsCallback));
     bookmarkTabView.setOnLongClickListener(view -> {
       PageBottomTab.of(4).longClick(pageActionTabsCallback);
@@ -578,7 +573,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
   private void goToSearch(boolean isVoice) {
     final String zimFile = ZimContentProvider.getZimFile();
     saveTabStates();
-    Intent i = new Intent(KiwixMobileActivity.this, SearchActivity.class);
+    Intent i = new Intent(MainActivity.this, SearchActivity.class);
     i.putExtra(EXTRA_ZIM_FILE, zimFile);
     if (isVoice) {
       i.putExtra(EXTRA_IS_WIDGET_VOICE, true);
@@ -654,7 +649,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
             break;
         }
       }
-  });
+    });
 
     pauseTTSButton.setOnClickListener(view -> {
       if (tts.currentTTSTask == null) {
@@ -696,8 +691,8 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
     ViewGroup.MarginLayoutParams leftLayoutMargins = (ViewGroup.MarginLayoutParams) tabDrawerLeftContainer.getLayoutParams(),
         rightLayoutMargins = (ViewGroup.MarginLayoutParams) tableDrawerRightContainer.getLayoutParams();
 
-    leftLayoutMargins.topMargin = DimenUtils.getToolbarHeight(KiwixMobileActivity.this);
-    rightLayoutMargins.topMargin = DimenUtils.getToolbarHeight(KiwixMobileActivity.this);
+    leftLayoutMargins.topMargin = DimenUtils.getToolbarHeight(MainActivity.this);
+    rightLayoutMargins.topMargin = DimenUtils.getToolbarHeight(MainActivity.this);
     tabDrawerLeftContainer.setLayoutParams(leftLayoutMargins);
     tableDrawerRightContainer.setLayoutParams(rightLayoutMargins);
   }
@@ -715,7 +710,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
     AttributeSet attrs = StyleUtils.getAttributes(this, R.xml.webview);
     KiwixWebView webView;
     if (!isHideToolbar) {
-      webView = new ToolbarScrollingKiwixWebView(KiwixMobileActivity.this, this, toolbarContainer, pageBottomTabLayout , attrs);
+      webView = new ToolbarScrollingKiwixWebView(MainActivity.this, this, toolbarContainer, pageBottomTabLayout, attrs);
       ((ToolbarScrollingKiwixWebView) webView).setOnToolbarVisibilityChangeListener(
           new ToolbarScrollingKiwixWebView.OnToolbarVisibilityChangeListener() {
             @Override
@@ -730,7 +725,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
           }
       );
     } else {
-      webView = new ToolbarStaticKiwixWebView(KiwixMobileActivity.this, this, toolbarContainer, attrs);
+      webView = new ToolbarStaticKiwixWebView(MainActivity.this, this, toolbarContainer, attrs);
     }
     webView.loadUrl(url);
     webView.loadPrefs();
@@ -909,7 +904,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
   private void openFullScreen() {
     toolbarContainer.setVisibility(View.GONE);
     pageBottomTabLayout.setVisibility(View.GONE);
-    if(menuBookmarks != null)
+    if (menuBookmarks != null)
       menuBookmarks.setVisible(true);
     exitFullscreenButton.setVisibility(View.VISIBLE);
     int fullScreenFlag = WindowManager.LayoutParams.FLAG_FULLSCREEN;
@@ -955,7 +950,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
   public void sendContactEmail() {
     Intent intent = new Intent(Intent.ACTION_SEND);
     intent.setType("plain/text");
-    intent.putExtra(Intent.EXTRA_EMAIL, new String[] {CONTACT_EMAIL_ADDRESS});
+    intent.putExtra(Intent.EXTRA_EMAIL, new String[]{CONTACT_EMAIL_ADDRESS});
     intent.putExtra(Intent.EXTRA_SUBJECT, "Feedback in " +
         LanguageUtils.getCurrentLocale(this).getDisplayLanguage());
     startActivity(Intent.createChooser(intent, ""));
@@ -1037,7 +1032,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
     } else {
       this.file = file;
       ActivityCompat.requestPermissions(this,
-          new String[] { Manifest.permission.READ_EXTERNAL_STORAGE },
+          new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
           REQUEST_STORAGE_PERMISSION);
       if (BuildConfig.IS_CUSTOM_APP && Build.VERSION.SDK_INT == Build.VERSION_CODES.M) {
         Toast.makeText(this, getResources().getString(R.string.request_storage_custom), Toast.LENGTH_LONG)
@@ -1052,13 +1047,13 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
 
   @Override
   public void onRequestPermissionsResult(int requestCode,
-      String permissions[], int[] grantResults) {
+                                         String permissions[], int[] grantResults) {
     switch (requestCode) {
       case REQUEST_STORAGE_PERMISSION: {
         if (grantResults.length > 0
             && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
           finish();
-          Intent newZimFile = new Intent(KiwixMobileActivity.this, KiwixMobileActivity.class);
+          Intent newZimFile = new Intent(MainActivity.this, MainActivity.class);
           newZimFile.setData(Uri.fromFile(file));
           startActivity(newZimFile);
         } else {
@@ -1081,7 +1076,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
   }
 
   // Create a correctly colored title for menu items
-  private SpannableString createMenuItem(String title){
+  private SpannableString createMenuItem(String title) {
     SpannableString s = new SpannableString(title);
     if (nightMode) {
       s.setSpan(new ForegroundColorSpan(Color.WHITE), 0, s.length(), 0);
@@ -1092,7 +1087,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
   }
 
   // Create a correctly colored title for menu items
-  private SpannableString createMenuText(String title){
+  private SpannableString createMenuText(String title) {
     SpannableString s = new SpannableString(title);
     s.setSpan(new ForegroundColorSpan(Color.WHITE), 0, s.length(), 0);
     return s;
@@ -1110,7 +1105,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
       searchItem.setVisible(true);
       final String zimFile = ZimContentProvider.getZimFile();
       searchItem.setOnMenuItemClickListener(item -> {
-        Intent i = new Intent(KiwixMobileActivity.this, SearchActivity.class);
+        Intent i = new Intent(MainActivity.this, SearchActivity.class);
         i.putExtra(EXTRA_ZIM_FILE, zimFile);
         startActivityForResult(i, REQUEST_FILE_SEARCH);
         overridePendingTransition(0, 0);
@@ -1118,7 +1113,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
       });
 
       toolbar.setOnClickListener(v -> {
-        Intent i = new Intent(KiwixMobileActivity.this, SearchActivity.class);
+        Intent i = new Intent(MainActivity.this, SearchActivity.class);
         i.putExtra(EXTRA_ZIM_FILE, zimFile);
         startActivityForResult(i, REQUEST_FILE_SEARCH);
         overridePendingTransition(0, 0);
@@ -1263,14 +1258,14 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
       if (intent.getAction().equals(Intent.ACTION_PROCESS_TEXT)) {
         final String zimFile = ZimContentProvider.getZimFile();
         saveTabStates();
-        Intent i = new Intent(KiwixMobileActivity.this, SearchActivity.class);
+        Intent i = new Intent(MainActivity.this, SearchActivity.class);
         i.putExtra(EXTRA_ZIM_FILE, zimFile);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
           i.putExtra(Intent.EXTRA_PROCESS_TEXT, intent.getStringExtra(Intent.EXTRA_PROCESS_TEXT));
         }
         intent.setAction("");
         startActivityForResult(i, REQUEST_FILE_SEARCH);
-      } else if (intent.getAction().equals(KiwixSearchWidget.TEXT_CLICKED)){
+      } else if (intent.getAction().equals(KiwixSearchWidget.TEXT_CLICKED)) {
         intent.setAction("");
         goToSearch(false);
       } else if (intent.getAction().equals(KiwixSearchWidget.STAR_CLICKED)) {
@@ -1282,7 +1277,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
       } else if (intent.getAction().equals(Intent.ACTION_VIEW)) {
         final String zimFile = ZimContentProvider.getZimFile();
         saveTabStates();
-        Intent i = new Intent(KiwixMobileActivity.this, SearchActivity.class);
+        Intent i = new Intent(MainActivity.this, SearchActivity.class);
         i.putExtra(EXTRA_ZIM_FILE, zimFile);
         i.putExtra(EXTRA_SEARCH, intent.getData().getLastPathSegment());
         intent.setAction("");
@@ -1340,7 +1335,8 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
 
     AlertDialog.Builder builder = new AlertDialog.Builder(this, dialogStyle());
     builder.setMessage(getString(R.string.hint_contents_drawer_message))
-        .setPositiveButton(getString(R.string.got_it), (dialog, id) -> {})
+        .setPositiveButton(getString(R.string.got_it), (dialog, id) -> {
+        })
         .setTitle(getString(R.string.did_you_know))
         .setIcon(R.drawable.icon_question);
     AlertDialog alert = builder.create();
@@ -1370,19 +1366,6 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
     tts.readAloud(getCurrentWebView());
   }
 
-  public static void updateWidgets(Context context) {
-    Intent intent = new Intent(context.getApplicationContext(), KiwixSearchWidget.class);
-    intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-    // Use an array and EXTRA_APPWIDGET_IDS instead of AppWidgetManager.EXTRA_APPWIDGET_ID,
-    // since it seems the onUpdate() is only fired on that:
-    AppWidgetManager widgetManager = AppWidgetManager.getInstance(context);
-    int[] ids = widgetManager.getAppWidgetIds(new ComponentName(context, KiwixSearchWidget.class));
-
-    widgetManager.notifyAppWidgetViewDataChanged(ids, android.R.id.list);
-    intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
-    context.sendBroadcast(intent);
-  }
-
   private void setUpWebView() {
 
     getCurrentWebView().getSettings().setJavaScriptEnabled(true);
@@ -1401,7 +1384,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
     // However, it must notify the bookmark system when a page is finished loading
     // so that it can refresh the menu.
 
-    backToTopButton.setOnClickListener(view -> KiwixMobileActivity.this.runOnUiThread(() -> getCurrentWebView().pageUp(true)));
+    backToTopButton.setOnClickListener(view -> MainActivity.this.runOnUiThread(() -> getCurrentWebView().pageUp(true)));
     tts.initWebView(getCurrentWebView());
   }
 
@@ -1463,7 +1446,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
             return;
           }
           finish();
-          Intent zimFile = new Intent(KiwixMobileActivity.this, KiwixMobileActivity.class);
+          Intent zimFile = new Intent(MainActivity.this, MainActivity.class);
           zimFile.setData(uri);
           startActivity(zimFile);
         }
@@ -1492,7 +1475,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
       case REQUEST_PREFERENCES:
         if (resultCode == RESULT_RESTART) {
           finish();
-          startActivity(new Intent(KiwixMobileActivity.this, KiwixMobileActivity.class));
+          startActivity(new Intent(MainActivity.this, MainActivity.class));
         }
         if (resultCode == RESULT_HISTORY_CLEARED) {
           mWebViews.clear();
@@ -1604,16 +1587,16 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
       int icon = bookmarks.contains(getCurrentWebView().getUrl()) ? R.drawable.action_bookmark_active : R.drawable.action_bookmark;
 
       menu.findItem(R.id.menu_bookmarks)
-              .setEnabled(true)
-              .setIcon(icon)
-              .getIcon().setAlpha(255);
+          .setEnabled(true)
+          .setIcon(icon)
+          .getIcon().setAlpha(255);
 
       bookmarkTab.getCustomView().findViewById(R.id.bookmark_tab_icon).setBackgroundResource(icon);
     } else {
       menu.findItem(R.id.menu_bookmarks)
-              .setEnabled(false)
-              .setIcon(R.drawable.action_bookmark)
-              .getIcon().setAlpha(130);
+          .setEnabled(false)
+          .setIcon(R.drawable.action_bookmark)
+          .getIcon().setAlpha(130);
 
       bookmarkTab.getCustomView().findViewById(R.id.bookmark_tab_icon).setBackgroundResource(R.drawable.action_bookmark);
     }
@@ -1746,7 +1729,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
       String filePath = FileUtils.getLocalFilePathByUri(getApplicationContext(), getIntent().getData());
 
       if (filePath == null || !new File(filePath).exists()) {
-        Toast.makeText(KiwixMobileActivity.this, getString(R.string.error_filenotfound), Toast.LENGTH_LONG).show();
+        Toast.makeText(MainActivity.this, getString(R.string.error_filenotfound), Toast.LENGTH_LONG).show();
         return;
       }
 
@@ -1809,13 +1792,13 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
             zimFileMissingBuilder.setIcon(R.mipmap.kiwix_icon);
             final Activity activity = this;
             zimFileMissingBuilder.setPositiveButton(getString(R.string.go_to_play_store),
-                    (dialog, which) -> {
-                      String market_uri = "market://details?id=" + BuildConfig.APPLICATION_ID;
-                      Intent intent = new Intent(Intent.ACTION_VIEW);
-                      intent.setData(Uri.parse(market_uri));
-                      startActivity(intent);
-                      activity.finish();
-                    });
+                (dialog, which) -> {
+                  String market_uri = "market://details?id=" + BuildConfig.APPLICATION_ID;
+                  Intent intent = new Intent(Intent.ACTION_VIEW);
+                  intent.setData(Uri.parse(market_uri));
+                  startActivity(intent);
+                  activity.finish();
+                });
             zimFileMissingBuilder.setCancelable(false);
             AlertDialog zimFileMissingDialog = zimFileMissingBuilder.create();
             zimFileMissingDialog.show();
@@ -1840,7 +1823,8 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
     Log.d(TAG_KIWIX, "onPause Save currentzimfile to preferences: " + ZimContentProvider.getZimFile());
   }
 
-  @Override public void webViewUrlLoading() {
+  @Override
+  public void webViewUrlLoading() {
     if (isFirstRun && !BuildConfig.DEBUG) {
       contentsDrawerHint();
       sharedPreferenceUtil.putPrefIsFirstRun(false);// It is no longer the first run
@@ -1848,7 +1832,8 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
     }
   }
 
-  @Override public void webViewUrlFinishedLoading() {
+  @Override
+  public void webViewUrlFinishedLoading() {
     updateTableOfContents();
     tabDrawerAdapter.notifyDataSetChanged();
 
@@ -1856,12 +1841,14 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
       refreshBookmarkSymbol(menu);
   }
 
-  @Override public void webViewFailedLoading(String url) {
+  @Override
+  public void webViewFailedLoading(String url) {
     String error = String.format(getString(R.string.error_articleurlnotfound), url);
     Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
   }
 
-  @Override public void webViewProgressChanged(int progress) {
+  @Override
+  public void webViewProgressChanged(int progress) {
     progressBar.setProgress(progress);
     if (progress == 100) {
       if (requestClearHistoryAfterLoad) {
@@ -1875,23 +1862,25 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
     }
   }
 
-  @Override public void webViewTitleUpdated(String title) {
+  @Override
+  public void webViewTitleUpdated(String title) {
     tabDrawerAdapter.notifyDataSetChanged();
   }
 
 
-  @Override public void webViewPageChanged(int page, int maxPages) {
+  @Override
+  public void webViewPageChanged(int page, int maxPages) {
     if (isBackToTopEnabled) {
       if (getCurrentWebView().getScrollY() > 200) {
-        if (backToTopButton.getVisibility() == View.INVISIBLE && TTSControls.getVisibility() == View.GONE ) {
+        if (backToTopButton.getVisibility() == View.INVISIBLE && TTSControls.getVisibility() == View.GONE) {
           backToTopButton.setText(R.string.button_backtotop);
           backToTopButton.setVisibility(View.VISIBLE);
 
           backToTopButton.startAnimation(
-              AnimationUtils.loadAnimation(KiwixMobileActivity.this, android.R.anim.fade_in));
+              AnimationUtils.loadAnimation(MainActivity.this, android.R.anim.fade_in));
           backToTopButton.setVisibility(View.INVISIBLE);
           Animation fadeAnimation =
-              AnimationUtils.loadAnimation(KiwixMobileActivity.this, android.R.anim.fade_out);
+              AnimationUtils.loadAnimation(MainActivity.this, android.R.anim.fade_out);
           fadeAnimation.setStartOffset(1200);
           backToTopButton.startAnimation(fadeAnimation);
         }
@@ -1901,7 +1890,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
 
           backToTopButton.clearAnimation();
           backToTopButton.startAnimation(
-              AnimationUtils.loadAnimation(KiwixMobileActivity.this, android.R.anim.fade_out));
+              AnimationUtils.loadAnimation(MainActivity.this, android.R.anim.fade_out));
         } else {
           backToTopButton.clearAnimation();
         }
@@ -1909,7 +1898,8 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
     }
   }
 
-  @Override public void webViewLongClick(final String url) {
+  @Override
+  public void webViewLongClick(final String url) {
     boolean handleEvent = false;
     if (url.startsWith(ZimContentProvider.CONTENT_URI.toString())) {
       // This is my web site, so do not override; let my WebView load the page
@@ -1922,7 +1912,7 @@ public class KiwixMobileActivity extends BaseActivity implements WebViewCallback
     }
 
     if (handleEvent) {
-      AlertDialog.Builder builder = new AlertDialog.Builder(KiwixMobileActivity.this, dialogStyle());
+      AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this, dialogStyle());
 
       builder.setPositiveButton(android.R.string.yes, (dialog, id) -> {
         if (isOpenNewTabInBackground) {

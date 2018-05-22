@@ -43,9 +43,9 @@ import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 
-import org.kiwix.kiwixmobile.KiwixMobileActivity;
 import org.kiwix.kiwixmobile.R;
 import org.kiwix.kiwixmobile.base.BaseActivity;
+import org.kiwix.kiwixmobile.main.MainActivity;
 import org.kiwix.kiwixmobile.settings.KiwixSettingsActivity;
 import org.kiwix.kiwixmobile.utils.LanguageUtils;
 import org.kiwix.kiwixmobile.utils.SharedPreferenceUtil;
@@ -158,7 +158,7 @@ public class BookmarksActivity extends BaseActivity
 
   @Override
   public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-    Intent intent = new Intent(this, KiwixMobileActivity.class);
+    Intent intent = new Intent(this, MainActivity.class);
     if (!bookmarkUrls.get(position).equals("null")) {
       intent.putExtra(EXTRA_CHOSE_X_URL, bookmarkUrls.get(position));
     } else {
@@ -178,7 +178,7 @@ public class BookmarksActivity extends BaseActivity
   @Override
   public void onBackPressed() {
     int value = Settings.System.getInt(getContentResolver(), Settings.System.ALWAYS_FINISH_ACTIVITIES, 0);
-    Intent startIntent = new Intent(this, KiwixMobileActivity.class);
+    Intent startIntent = new Intent(this, MainActivity.class);
     startIntent.putExtra(EXTRA_BOOKMARK_CLICKED, false);
 
     if (value == 1) { // means there's only 1 activity in stack so start new

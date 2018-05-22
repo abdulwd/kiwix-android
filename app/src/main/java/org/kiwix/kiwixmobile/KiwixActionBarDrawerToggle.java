@@ -23,11 +23,13 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 
+import org.kiwix.kiwixmobile.main.MainActivity;
+
 public class KiwixActionBarDrawerToggle extends ActionBarDrawerToggle {
 
   private final DrawerLayout drawerLayout;
 
-  public KiwixActionBarDrawerToggle(KiwixMobileActivity activity, DrawerLayout drawerLayout, Toolbar toolbar) {
+  public KiwixActionBarDrawerToggle(MainActivity activity, DrawerLayout drawerLayout, Toolbar toolbar) {
     super(activity, drawerLayout, toolbar, 0, 0);
     this.drawerLayout = drawerLayout;
   }
