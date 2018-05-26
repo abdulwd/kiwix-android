@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <resources>
-
+  <attr name="toolbarTheme" format="reference" />
   <attr name="progressBackgroundColor" format="color"/>
   <attr name="arrowBackDrawable" format="integer"/>
   <attr name="arrowForwardDrawable" format="integer"/>

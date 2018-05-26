@@ -31,6 +31,7 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.net.Uri;
@@ -38,14 +39,17 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.design.widget.BaseTransientBottomBar;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.Snackbar;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GravityCompat;
+import android.support.v4.view.OnApplyWindowInsetsListener;
+import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.view.menu.ActionMenuItemView;
 import android.support.v7.widget.LinearLayoutManager;
@@ -74,11 +78,11 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.kiwix.kiwixmobile.BuildConfig;
-import org.kiwix.kiwixmobile.KiwixActionBarDrawerToggle;
 import org.kiwix.kiwixmobile.PageBottomTab;
 import org.kiwix.kiwixmobile.R;
 import org.kiwix.kiwixmobile.TabDrawerAdapter;
@@ -116,13 +120,23 @@ import java.util.Locale;
 
 import javax.inject.Inject;
 
-import butterknife.BindView;
-import butterknife.ButterKnife;
+import de.mrapp.android.tabswitcher.AddTabButtonListener;
+import de.mrapp.android.tabswitcher.Layout;
+import de.mrapp.android.tabswitcher.PeekAnimation;
+import de.mrapp.android.tabswitcher.PullDownGesture;
+import de.mrapp.android.tabswitcher.RevealAnimation;
+import de.mrapp.android.tabswitcher.SwipeGesture;
+import de.mrapp.android.tabswitcher.Tab;
+import de.mrapp.android.tabswitcher.TabSwitcher;
+import de.mrapp.android.tabswitcher.TabSwitcherDecorator;
+import de.mrapp.android.tabswitcher.TabSwitcherListener;
+import de.mrapp.android.util.ThemeUtil;
 import okhttp3.OkHttpClient;
 
 import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
 import static android.os.Build.VERSION.SDK_INT;
 import static android.os.Build.VERSION_CODES;
+import static de.mrapp.android.util.DisplayUtil.getDisplayWidth;
 import static org.kiwix.kiwixmobile.TableDrawerAdapter.DocumentSection;
 import static org.kiwix.kiwixmobile.TableDrawerAdapter.TableClickListener;
 import static org.kiwix.kiwixmobile.search.SearchActivity.EXTRA_SEARCH_IN_TEXT;
@@ -138,7 +152,6 @@ import static org.kiwix.kiwixmobile.utils.Constants.EXTRA_IS_WIDGET_STAR;
 import static org.kiwix.kiwixmobile.utils.Constants.EXTRA_IS_WIDGET_VOICE;
 import static org.kiwix.kiwixmobile.utils.Constants.EXTRA_LIBRARY;
 import static org.kiwix.kiwixmobile.utils.Constants.EXTRA_NOTIFICATION_ID;
-import static org.kiwix.kiwixmobile.utils.Constants.EXTRA_SEARCH;
 import static org.kiwix.kiwixmobile.utils.Constants.EXTRA_ZIM_FILE;
 import static org.kiwix.kiwixmobile.utils.Constants.EXTRA_ZIM_FILE_2;
 import static org.kiwix.kiwixmobile.utils.Constants.PREF_KIWIX_MOBILE;
@@ -156,7 +169,7 @@ import static org.kiwix.kiwixmobile.utils.Constants.TAG_FILE_SEARCHED;
 import static org.kiwix.kiwixmobile.utils.Constants.TAG_KIWIX;
 import static org.kiwix.kiwixmobile.utils.StyleUtils.dialogStyle;
 
-public class MainActivity extends BaseActivity implements WebViewCallback {
+public class MainActivity extends BaseActivity implements WebViewCallback, TabSwitcherListener {
 
   public static boolean isFullscreenOpened;
   public static boolean refresh;
@@ -168,47 +181,29 @@ public class MainActivity extends BaseActivity implements WebViewCallback {
   public Menu menu;
   protected boolean requestClearHistoryAfterLoad = false;
   protected boolean requestInitAllMenuItems = false;
-  @BindView(R.id.toolbar)
+
   Toolbar toolbar;
-  @BindView(R.id.button_backtotop)
+
   Button backToTopButton;
-  @BindView(R.id.button_stop_tts)
+
   Button stopTTSButton;
-  @BindView(R.id.button_pause_tts)
   Button pauseTTSButton;
-  @BindView(R.id.tts_controls)
   LinearLayout TTSControls;
-  @BindView(R.id.toolbar_layout)
   RelativeLayout toolbarContainer;
-  @BindView(R.id.progress_view)
   AnimatedProgressBar progressBar;
-  @BindView(R.id.FullscreenControlButton)
   ImageButton exitFullscreenButton;
-  @BindView(R.id.snackbar_layout)
   CoordinatorLayout snackbarLayout;
-  @BindView(R.id.new_tab_button)
   RelativeLayout newTabButton;
-  @BindView(R.id.drawer_layout)
   DrawerLayout drawerLayout;
-  @BindView(R.id.left_drawer)
   LinearLayout tabDrawerLeftContainer;
-  @BindView(R.id.right_drawer)
   LinearLayout tableDrawerRightContainer;
-  @BindView(R.id.left_drawer_list)
   RecyclerView tabDrawerLeft;
-  @BindView(R.id.right_drawer_list)
   RecyclerView tableDrawerRight;
-  @BindView(R.id.content_frame)
   FrameLayout contentFrame;
-  @BindView(R.id.action_back_button)
   ImageView tabBackButton;
-  @BindView(R.id.action_forward_button)
   ImageView tabForwardButton;
-  @BindView(R.id.action_back)
   View tabBackButtonContainer;
-  @BindView(R.id.action_forward)
   View tabForwardButtonContainer;
-  @BindView(R.id.page_bottom_tab_layout)
   TabLayout pageBottomTabLayout;
   @Inject
   OkHttpClient okHttpClient;
@@ -337,174 +332,10 @@ public class MainActivity extends BaseActivity implements WebViewCallback {
     }
   }
 
-  @Override
-  public void onCreate(Bundle savedInstanceState) {
-    getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
-
-    super.onCreate(savedInstanceState);
-
-    new WebView(this).destroy(); // Workaround for buggy webviews see #710
-
-    wifiOnly = sharedPreferenceUtil.getPrefWifiOnly();
-    nightMode = KiwixSettingsActivity.nightMode(sharedPreferenceUtil);
-    if (nightMode) {
-      setTheme(R.style.AppTheme_Night);
-    }
-
-    handleLocaleCheck();
-    setContentView(R.layout.main);
-    ButterKnife.bind(this);
-
-    setUpToolbar();
-
-    checkForRateDialog();
-
-    initPlayStoreUri();
-
-    if (SDK_INT <= VERSION_CODES.LOLLIPOP) {
-      snackbarLayout.setFitsSystemWindows(true);
-    }
-
-    isHideToolbar = sharedPreferenceUtil.getPrefHideToolbar();
-
-    FileReader fileReader = new FileReader();
-    documentParserJs = fileReader.readFile("js/documentParser.js", this);
-
-    newTabButton.setOnClickListener((View view) -> newTab());
-    tabForwardButtonContainer.setOnClickListener((View view) -> {
-      if (getCurrentWebView().canGoForward()) {
-        getCurrentWebView().goForward();
-      }
-    });
-    tabBackButtonContainer.setOnClickListener((View view) -> {
-      if (getCurrentWebView().canGoBack()) {
-        getCurrentWebView().goBack();
-      }
-    });
-
-    documentSections = new ArrayList<>();
-    tabDrawerAdapter = new TabDrawerAdapter(mWebViews);
-    tabDrawerLeft.setLayoutManager(new LinearLayoutManager(this));
-    tabDrawerLeft.setAdapter(tabDrawerAdapter);
-    tableDrawerRight.setLayoutManager(new LinearLayoutManager(this));
-
-    TableDrawerAdapter tableDrawerAdapter = new TableDrawerAdapter();
-    tableDrawerRight.setAdapter(tableDrawerAdapter);
-    tableDrawerAdapter.setTableClickListener(new TableClickListener() {
-      @Override
-      public void onHeaderClick(View view) {
-        getCurrentWebView().setScrollY(0);
-        drawerLayout.closeDrawer(GravityCompat.END);
-      }
-
-      @Override
-      public void onSectionClick(View view, int position) {
-        getCurrentWebView().loadUrl("javascript:document.getElementById('"
-            + documentSections.get(position).id
-            + "').scrollIntoView();");
-
-        drawerLayout.closeDrawers();
-      }
-    });
-
-    tableDrawerAdapter.notifyDataSetChanged();
-
-    tabDrawerAdapter.setTabClickListener(new TabDrawerAdapter.TabClickListener() {
-      @Override
-      public void onSelectTab(View view, int position) {
-        selectTab(position);
-
-        /* Bug Fix
-         * Issue #592 in which the navigational history of the previously open tab (WebView) was
-         * carried forward to the newly selected/opened tab; causing erroneous enabling of
-         * navigational buttons.
-         */
-        refreshNavigationButtons();
-      }
-
-      @Override
-      public void onCloseTab(View view, int position) {
-        closeTab(position);
-      }
-    });
-
-    ActionBarDrawerToggle drawerToggle = new KiwixActionBarDrawerToggle(this, drawerLayout, toolbar);
-
-    drawerLayout.addDrawerListener(drawerToggle);
-    getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-    getSupportActionBar().setHomeButtonEnabled(true);
-    drawerToggle.syncState();
-
-    compatCallback = new CompatFindActionModeCallback(this);
-    setUpTTS();
-    documentParser = new DocumentParser(new DocumentParser.SectionsListener() {
-      @Override
-      public void sectionsLoaded(String title, List<DocumentSection> sections) {
-        documentSections.addAll(sections);
-        tableDrawerAdapter.setTitle(title);
-        tableDrawerAdapter.setSections(documentSections);
-        tableDrawerAdapter.notifyDataSetChanged();
-      }
-
-      @Override
-      public void clearSections() {
-        documentSections.clear();
-        tableDrawerAdapter.notifyDataSetChanged();
-      }
-    });
-
-    manageExternalLaunchAndRestoringViewState();
-    setUpExitFullscreenButton();
-    loadPrefs();
-    updateTitle(ZimContentProvider.getZimFileTitle());
-
-    Intent i = getIntent();
-    if (i.getBooleanExtra(EXTRA_LIBRARY, false)) {
-      manageZimFiles(2);
-    }
-    if (i.hasExtra(TAG_FILE_SEARCHED)) {
-      searchForTitle(i.getStringExtra(TAG_FILE_SEARCHED));
-      selectTab(mWebViews.size() - 1);
-    }
-    if (i.hasExtra(EXTRA_CHOSE_X_URL)) {
-      newTab();
-      getCurrentWebView().loadUrl(i.getStringExtra(EXTRA_CHOSE_X_URL));
-    }
-    if (i.hasExtra(EXTRA_CHOSE_X_TITLE)) {
-      newTab();
-      getCurrentWebView().loadUrl(i.getStringExtra(EXTRA_CHOSE_X_TITLE));
-    }
-    if (i.hasExtra(EXTRA_ZIM_FILE)) {
-      File file = new File(FileUtils.getFileName(i.getStringExtra(EXTRA_ZIM_FILE)));
-      LibraryFragment.mService.cancelNotification(i.getIntExtra(EXTRA_NOTIFICATION_ID, 0));
-      Uri uri = Uri.fromFile(file);
-
-      finish();
-      Intent zimFile = new Intent(MainActivity.this, MainActivity.class);
-      zimFile.setData(uri);
-      startActivity(zimFile);
-    }
-
-    pageBottomTabLayout.addOnTabSelectedListener(pageBottomTabListener);
-
-    View bookmarkTabView = LayoutInflater.from(MainActivity.this)
-        .inflate(R.layout.bookmark_tab, null);
-    bookmarkTabView.setOnClickListener(view -> PageBottomTab.of(4).select(pageActionTabsCallback));
-    bookmarkTabView.setOnLongClickListener(view -> {
-      PageBottomTab.of(4).longClick(pageActionTabsCallback);
-      return true;
-    });
-
-    pageBottomTabLayout.getTabAt(4).setCustomView(bookmarkTabView);
-
-    wasHideToolbar = isHideToolbar;
-
-    if (nightMode) {
-      backToTopAppearNightly();
-    } else {
-      backToTopAppearDaily();
-    }
-  }
+  /**
+   * The name of the extra, which is used to store the view type of a tab within a bundle.
+   */
+  private static final String VIEW_TYPE_EXTRA = MainActivity.class.getName() + "::ViewType";
 
   private void backToTopAppearDaily() {
     backToTopButton.setAlpha(0.6f);
@@ -1202,93 +1033,6 @@ public class MainActivity extends BaseActivity implements WebViewCallback {
   }
 
   @Override
-  public void onResume() {
-    super.onResume();
-    invalidateOptionsMenu();
-    if (wasHideToolbar != isHideToolbar) {
-      wasHideToolbar = isHideToolbar;
-
-      List<KiwixWebView> newWebViews = new ArrayList<>();
-      for (int i = 0; i < mWebViews.size(); i++) {
-        KiwixWebView newView = getWebView(mWebViews.get(i).getUrl());
-        newWebViews.add(i, newView);
-      }
-      mWebViews = newWebViews;
-      selectTab(currentWebViewIndex);
-    }
-    if (refresh) {
-      refresh = false;
-      recreate();
-    }
-    if (menu != null) {
-      refreshBookmarkSymbol(menu);
-    }
-    if (getResources().getConfiguration().orientation == ORIENTATION_LANDSCAPE) {
-      if (menu != null) {
-        menu.getItem(4).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-      }
-    } else {
-      if (menu != null) {
-        menu.getItem(4).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
-      }
-    }
-
-    if (!mWebViews.isEmpty() && mWebViews.get(currentWebViewIndex).getUrl() != null &&
-        mWebViews.get(currentWebViewIndex).getUrl().equals("file:///android_asset/help.html") &&
-        mWebViews.get(currentWebViewIndex).findViewById(R.id.get_content_card) != null) {
-      mWebViews.get(currentWebViewIndex).findViewById(R.id.get_content_card).setEnabled(true);
-    }
-
-    if (sharedPreferenceUtil.getPrefBottomToolbar()) {
-      pageBottomTabLayout.setVisibility(View.VISIBLE);
-      if (menuBookmarks != null) {
-        menuBookmarks.setVisible(false);
-      }
-    } else {
-      pageBottomTabLayout.setVisibility(View.GONE);
-      if (menuBookmarks != null) {
-        menuBookmarks.setVisible(true);
-      }
-    }
-
-    Log.d(TAG_KIWIX, "action" + getIntent().getAction());
-    Intent intent = getIntent();
-    if (intent.getAction() != null) {
-
-      if (intent.getAction().equals(Intent.ACTION_PROCESS_TEXT)) {
-        final String zimFile = ZimContentProvider.getZimFile();
-        saveTabStates();
-        Intent i = new Intent(MainActivity.this, SearchActivity.class);
-        i.putExtra(EXTRA_ZIM_FILE, zimFile);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-          i.putExtra(Intent.EXTRA_PROCESS_TEXT, intent.getStringExtra(Intent.EXTRA_PROCESS_TEXT));
-        }
-        intent.setAction("");
-        startActivityForResult(i, REQUEST_FILE_SEARCH);
-      } else if (intent.getAction().equals(KiwixSearchWidget.TEXT_CLICKED)) {
-        intent.setAction("");
-        goToSearch(false);
-      } else if (intent.getAction().equals(KiwixSearchWidget.STAR_CLICKED)) {
-        intent.setAction("");
-        goToBookmarks();
-      } else if (intent.getAction().equals(KiwixSearchWidget.MIC_CLICKED)) {
-        intent.setAction("");
-        goToSearch(true);
-      } else if (intent.getAction().equals(Intent.ACTION_VIEW)) {
-        final String zimFile = ZimContentProvider.getZimFile();
-        saveTabStates();
-        Intent i = new Intent(MainActivity.this, SearchActivity.class);
-        i.putExtra(EXTRA_ZIM_FILE, zimFile);
-        i.putExtra(EXTRA_SEARCH, intent.getData().getLastPathSegment());
-        intent.setAction("");
-        startActivityForResult(i, REQUEST_FILE_SEARCH);
-      }
-
-    }
-    updateWidgets(this);
-  }
-
-  @Override
   protected void onNewIntent(Intent intent) {
     super.onNewIntent(intent);
     boolean isWidgetSearch = intent.getBooleanExtra(EXTRA_IS_WIDGET_SEARCH, false);
@@ -1936,4 +1680,503 @@ public class MainActivity extends BaseActivity implements WebViewCallback {
     }
   }
 
+  private TabSwitcher tabSwitcher;
+  private Snackbar snackbar;
+
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+
+    super.onCreate(savedInstanceState);
+
+    new WebView(this).destroy(); // Workaround for buggy webviews see #710
+
+    wifiOnly = sharedPreferenceUtil.getPrefWifiOnly();
+    nightMode = KiwixSettingsActivity.nightMode(sharedPreferenceUtil);
+    if (nightMode) {
+      setTheme(R.style.AppTheme_Night);
+    }
+
+    handleLocaleCheck();
+    setContentView(R.layout.activity_main);
+
+    tabSwitcher = findViewById(R.id.tab_switcher);
+    tabSwitcher.clearSavedStatesWhenRemovingTabs(false);
+    ViewCompat.setOnApplyWindowInsetsListener(tabSwitcher, createWindowInsetsListener());
+    tabSwitcher.setDecorator(new Decorator());
+    tabSwitcher.addListener(this);
+    tabSwitcher.showToolbars(true);
+    tabSwitcher.addTab(createTab(0));
+
+    tabSwitcher.showAddTabButton(createAddTabButtonListener());
+    tabSwitcher.setToolbarNavigationIcon(R.drawable.ic_add_box_black_32dp, createAddTabListener());
+    TabSwitcher.setupWithMenu(tabSwitcher, createTabSwitcherButtonListener());
+    inflateMenu();
+
+    checkForRateDialog();
+
+    initPlayStoreUri();
+
+    if (SDK_INT <= VERSION_CODES.LOLLIPOP) {
+      snackbarLayout.setFitsSystemWindows(true);
+    }
+
+    isHideToolbar = sharedPreferenceUtil.getPrefHideToolbar();
+
+    FileReader fileReader = new FileReader();
+    documentParserJs = fileReader.readFile("js/documentParser.js", this);
+
+    documentSections = new ArrayList<>();
+    tabDrawerAdapter = new TabDrawerAdapter(mWebViews);
+
+
+    Intent i = getIntent();
+    if (i.getBooleanExtra(EXTRA_LIBRARY, false)) {
+      manageZimFiles(2);
+    }
+    if (i.hasExtra(TAG_FILE_SEARCHED)) {
+      searchForTitle(i.getStringExtra(TAG_FILE_SEARCHED));
+      selectTab(mWebViews.size() - 1);
+    }
+    if (i.hasExtra(EXTRA_CHOSE_X_URL)) {
+      newTab();
+      getCurrentWebView().loadUrl(i.getStringExtra(EXTRA_CHOSE_X_URL));
+    }
+    if (i.hasExtra(EXTRA_CHOSE_X_TITLE)) {
+      newTab();
+      getCurrentWebView().loadUrl(i.getStringExtra(EXTRA_CHOSE_X_TITLE));
+    }
+    if (i.hasExtra(EXTRA_ZIM_FILE)) {
+      File file = new File(FileUtils.getFileName(i.getStringExtra(EXTRA_ZIM_FILE)));
+      LibraryFragment.mService.cancelNotification(i.getIntExtra(EXTRA_NOTIFICATION_ID, 0));
+      Uri uri = Uri.fromFile(file);
+
+      finish();
+      Intent zimFile = new Intent(MainActivity.this, MainActivity.class);
+      zimFile.setData(uri);
+      startActivity(zimFile);
+    }
+
+    wasHideToolbar = isHideToolbar;
+  }
+
+  /**
+   * Creates a listener, which allows to apply the window insets to the tab switcher's padding.
+   *
+   * @return The listener, which has been created, as an instance of the type {@link
+   * OnApplyWindowInsetsListener}. The listener may not be nullFG
+   */
+  @NonNull
+  private OnApplyWindowInsetsListener createWindowInsetsListener() {
+    return (view, insets) -> {
+      int left = insets.getSystemWindowInsetLeft();
+      int top = insets.getSystemWindowInsetTop();
+      int right = insets.getSystemWindowInsetRight();
+      int bottom = insets.getSystemWindowInsetBottom();
+      tabSwitcher.setPadding(left, top, right, bottom);
+      float touchableAreaTop = top;
+
+      if (tabSwitcher.getLayout() == Layout.TABLET) {
+        touchableAreaTop += getResources()
+            .getDimensionPixelSize(R.dimen.tablet_tab_container_height);
+      }
+
+      RectF touchableArea = new RectF(left, touchableAreaTop,
+          getDisplayWidth(MainActivity.this) - right, touchableAreaTop +
+          ThemeUtil.getDimensionPixelSize(MainActivity.this, R.attr.actionBarSize));
+      tabSwitcher.addDragGesture(
+          new SwipeGesture.Builder().setTouchableArea(touchableArea).create());
+      tabSwitcher.addDragGesture(
+          new PullDownGesture.Builder().setTouchableArea(touchableArea).create());
+      return insets;
+    };
+  }
+
+  /**
+   * Creates and returns a listener, which allows to add a tab to the activity's tab switcher,
+   * when a button is clicked.
+   *
+   * @return The listener, which has been created, as an instance of the type {@link
+   * View.OnClickListener}. The listener may not be null
+   */
+  @NonNull
+  private View.OnClickListener createAddTabListener() {
+    return view -> {
+      int index = tabSwitcher.getCount();
+      de.mrapp.android.tabswitcher.Animation animation = createRevealAnimation();
+      tabSwitcher.addTab(createTab(index), 0, animation);
+    };
+  }
+
+  /**
+   * Creates and returns a listener, which allows to observe, when an item of the tab switcher's
+   * toolbar has been clicked.
+   *
+   * @return The listener, which has been created, as an instance of the type {@link
+   * Toolbar.OnMenuItemClickListener}. The listener may not be null
+   */
+  @NonNull
+  private Toolbar.OnMenuItemClickListener createToolbarMenuListener() {
+    return item -> {
+      switch (item.getItemId()) {
+        case R.id.remove_tab_menu_item:
+          Tab selectedTab = tabSwitcher.getSelectedTab();
+
+          if (selectedTab != null) {
+            tabSwitcher.removeTab(selectedTab);
+          }
+
+          return true;
+        case R.id.add_tab_menu_item:
+          int index = tabSwitcher.getCount();
+          Tab tab = createTab(index);
+          tabSwitcher.addTab(tab, 0, createRevealAnimation());
+
+          return true;
+        case R.id.clear_tabs_menu_item:
+          tabSwitcher.clear();
+          return true;
+        default:
+          return false;
+      }
+    };
+  }
+
+  /**
+   * Inflates the tab switcher's menu.
+   */
+  private void inflateMenu() {
+    tabSwitcher.inflateToolbarMenu(R.menu.tab_switcher, createToolbarMenuListener());
+  }
+
+  /**
+   * Creates and returns a listener, which allows to toggle the visibility of the tab switcher,
+   * when a button is clicked.
+   *
+   * @return The listener, which has been created, as an instance of the type {@link
+   * View.OnClickListener}. The listener may not be null
+   */
+  @NonNull
+  private View.OnClickListener createTabSwitcherButtonListener() {
+    return view -> tabSwitcher.toggleSwitcherVisibility();
+  }
+
+  /**
+   * Creates and returns a listener, which allows to add a new tab to the tab switcher, when the
+   * corresponding button is clicked.
+   *
+   * @return The listener, which has been created, as an instance of the type {@link
+   * AddTabButtonListener}. The listener may not be null
+   */
+  @NonNull
+  private AddTabButtonListener createAddTabButtonListener() {
+    return tabSwitcher -> {
+      int index = tabSwitcher.getCount();
+      Tab tab = createTab(index);
+      tabSwitcher.addTab(tab, 0);
+    };
+  }
+
+  /**
+   * Creates and returns a listener, which allows to undo the removal of tabs from the tab
+   * switcher, when the button of the activity's snackbar is clicked.
+   *
+   * @param snackbar The activity's snackbar as an instance of the class {@link Snackbar}. The snackbar
+   *                 may not be null
+   * @param index    The index of the first tab, which has been removed, as an {@link Integer} value
+   * @param tabs     An array, which contains the tabs, which have been removed, as an array of the type
+   *                 {@link Tab}. The array may not be null
+   * @return The listener, which has been created, as an instance of the type {@link
+   * View.OnClickListener}. The listener may not be null
+   */
+  @NonNull
+  private View.OnClickListener createUndoSnackbarListener(@NonNull final Snackbar snackbar,
+                                                          final int index,
+                                                          @NonNull final Tab... tabs) {
+    return view -> {
+      snackbar.setAction(null, null);
+
+      if (tabSwitcher.isSwitcherShown()) {
+        tabSwitcher.addAllTabs(tabs, index);
+      } else if (tabs.length == 1) {
+        tabSwitcher.addTab(tabs[0], 0, createPeekAnimation());
+      }
+
+    };
+  }
+
+  /**
+   * Creates and returns a callback, which allows to observe, when a snackbar, which allows to
+   * undo the removal of tabs, has been dismissed.
+   *
+   * @param tabs An array, which contains the tabs, which have been removed, as an array of the type
+   *             {@link Tab}. The tab may not be null
+   * @return The callback, which has been created, as an instance of the type class {@link
+   * BaseTransientBottomBar.BaseCallback}. The callback may not be null
+   */
+  @NonNull
+  private BaseTransientBottomBar.BaseCallback<Snackbar> createUndoSnackbarCallback(
+      final Tab... tabs) {
+    return new BaseTransientBottomBar.BaseCallback<Snackbar>() {
+
+      @Override
+      public void onDismissed(final Snackbar snackbar, final int event) {
+        if (event != DISMISS_EVENT_ACTION) {
+          for (Tab tab : tabs) {
+            tabSwitcher.clearSavedState(tab);
+          }
+        }
+      }
+    };
+  }
+
+  /**
+   * Shows a snackbar, which allows to undo the removal of tabs from the activity's tab switcher.
+   *
+   * @param text  The text of the snackbar as an instance of the type {@link CharSequence}. The text
+   *              may not be null
+   * @param index The index of the first tab, which has been removed, as an {@link Integer} value
+   * @param tabs  An array, which contains the tabs, which have been removed, as an array of the type
+   *              {@link Tab}. The array may not be null
+   */
+  private void showUndoSnackbar(@NonNull final CharSequence text, final int index,
+                                @NonNull final Tab... tabs) {
+    snackbar = Snackbar.make(tabSwitcher, text, Snackbar.LENGTH_LONG).setActionTextColor(
+        ContextCompat.getColor(this, R.color.accent));
+    snackbar.setAction(R.string.undo, createUndoSnackbarListener(snackbar, index, tabs));
+    snackbar.addCallback(createUndoSnackbarCallback(tabs));
+    snackbar.show();
+  }
+
+  /**
+   * Creates a reveal animation, which can be used to add a tab to the activity's tab switcher.
+   *
+   * @return The reveal animation, which has been created, as an instance of the class {@link
+   * de.mrapp.android.tabswitcher.Animation}. The animation may not be null
+   */
+  @NonNull
+  private de.mrapp.android.tabswitcher.Animation createRevealAnimation() {
+    float x = 0;
+    float y = 0;
+    View view = getNavigationMenuItem();
+
+    if (view != null) {
+      int[] location = new int[2];
+      view.getLocationInWindow(location);
+      x = location[0] + (view.getWidth() / 2f);
+      y = location[1] + (view.getHeight() / 2f);
+    }
+
+    return new RevealAnimation.Builder().setX(x).setY(y).create();
+  }
+
+  /**
+   * Creates a peek animation, which can be used to add a tab to the activity's tab switcher.
+   *
+   * @return The peek animation, which has been created, as an instance of the class {@link
+   * de.mrapp.android.tabswitcher.Animation}. The animation may not be null
+   */
+  @NonNull
+  private de.mrapp.android.tabswitcher.Animation createPeekAnimation() {
+    return new PeekAnimation.Builder().setX(tabSwitcher.getWidth() / 2f).create();
+  }
+
+  /**
+   * Returns the menu item, which shows the navigation icon of the tab switcher's toolbar.
+   *
+   * @return The menu item, which shows the navigation icon of the tab switcher's toolbar, as an
+   * instance of the class {@link View} or null, if no navigation icon is shown
+   */
+  @Nullable
+  private View getNavigationMenuItem() {
+    Toolbar[] toolbars = tabSwitcher.getToolbars();
+
+    if (toolbars != null) {
+      Toolbar toolbar = toolbars.length > 1 ? toolbars[1] : toolbars[0];
+      int size = toolbar.getChildCount();
+
+      for (int i = 0; i < size; i++) {
+        View child = toolbar.getChildAt(i);
+
+        if (child instanceof ImageButton) {
+          return child;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Creates and returns a tab.
+   *
+   * @param index The index, the tab should be added at, as an {@link Integer} value
+   * @return The tab, which has been created, as an instance of the class {@link Tab}. The tab may
+   * not be null
+   */
+  @NonNull
+  private Tab createTab(final int index) {
+    CharSequence title = getString(R.string.tab_title, index + 1);
+    Tab tab = new Tab(title);
+    Bundle parameters = new Bundle();
+    parameters.putInt(VIEW_TYPE_EXTRA, index % 3);
+    tab.setParameters(parameters);
+    return tab;
+  }
+
+  @Override
+  public final void onSwitcherShown(@NonNull final TabSwitcher tabSwitcher) {
+
+  }
+
+  @Override
+  public final void onSwitcherHidden(@NonNull final TabSwitcher tabSwitcher) {
+    if (snackbar != null) {
+      snackbar.dismiss();
+    }
+  }
+
+  @Override
+  public final void onSelectionChanged(@NonNull final TabSwitcher tabSwitcher,
+                                       final int selectedTabIndex,
+                                       @Nullable final Tab selectedTab) {
+
+  }
+
+  @Override
+  public final void onTabAdded(@NonNull final TabSwitcher tabSwitcher, final int index,
+                               @NonNull final Tab tab, @NonNull final de.mrapp.android.tabswitcher.Animation animation) {
+    inflateMenu();
+    TabSwitcher.setupWithMenu(tabSwitcher, createTabSwitcherButtonListener());
+  }
+
+  @Override
+  public final void onTabRemoved(@NonNull final TabSwitcher tabSwitcher, final int index,
+                                 @NonNull final Tab tab, @NonNull final de.mrapp.android.tabswitcher.Animation animation) {
+    CharSequence text = getString(R.string.removed_tab_snackbar, tab.getTitle());
+    showUndoSnackbar(text, index, tab);
+    inflateMenu();
+    TabSwitcher.setupWithMenu(tabSwitcher, createTabSwitcherButtonListener());
+  }
+
+  @Override
+  public final void onAllTabsRemoved(@NonNull final TabSwitcher tabSwitcher,
+                                     @NonNull final Tab[] tabs,
+                                     @NonNull final de.mrapp.android.tabswitcher.Animation animation) {
+    CharSequence text = getString(R.string.cleared_tabs_snackbar);
+    showUndoSnackbar(text, 0, tabs);
+    inflateMenu();
+    TabSwitcher.setupWithMenu(tabSwitcher, createTabSwitcherButtonListener());
+  }
+
+
+  /**
+   * The decorator, which is used to inflate and visualize the tabs of the activity's tab
+   * switcher.
+   */
+  private class Decorator extends TabSwitcherDecorator {
+
+    @NonNull
+    @Override
+    public View onInflateView(@NonNull final LayoutInflater inflater,
+                              @Nullable final ViewGroup parent, final int viewType) {
+      View view = inflater.inflate(R.layout.main, parent, false);
+
+      toolbar = view.findViewById(R.id.toolbar);
+      toolbar.inflateMenu(R.menu.menu_main);
+      toolbar.setOnMenuItemClickListener(createToolbarMenuListener());
+      Menu menu = toolbar.getMenu();
+      TabSwitcher.setupWithMenu(tabSwitcher, menu, createTabSwitcherButtonListener());
+      backToTopButton = view.findViewById(R.id.button_backtotop);
+      stopTTSButton = view.findViewById(R.id.button_stop_tts);
+      pauseTTSButton = view.findViewById(R.id.button_pause_tts);
+      TTSControls = view.findViewById(R.id.tts_controls);
+      toolbarContainer = view.findViewById(R.id.toolbar_layout);
+      progressBar = view.findViewById(R.id.progress_view);
+      exitFullscreenButton = view.findViewById(R.id.FullscreenControlButton);
+      snackbarLayout = view.findViewById(R.id.snackbar_layout);
+      newTabButton = view.findViewById(R.id.new_tab_button);
+      drawerLayout = view.findViewById(R.id.drawer_layout);
+      tabDrawerLeftContainer = view.findViewById(R.id.left_drawer);
+      tableDrawerRightContainer = view.findViewById(R.id.right_drawer);
+      tabDrawerLeft = view.findViewById(R.id.left_drawer_list);
+      tableDrawerRight = view.findViewById(R.id.right_drawer_list);
+      contentFrame = view.findViewById(R.id.content_frame);
+      tabBackButton = view.findViewById(R.id.action_back_button);
+      tabForwardButton = view.findViewById(R.id.action_forward_button);
+      tabBackButtonContainer = view.findViewById(R.id.action_back);
+      tabForwardButtonContainer = view.findViewById(R.id.action_forward);
+      pageBottomTabLayout = view.findViewById(R.id.page_bottom_tab_layout);
+
+      newTabButton.setOnClickListener((v) -> newTab());
+      tabForwardButtonContainer.setOnClickListener((v) -> {
+        if (getCurrentWebView().canGoForward()) {
+          getCurrentWebView().goForward();
+        }
+      });
+      tabBackButtonContainer.setOnClickListener((v) -> {
+        if (getCurrentWebView().canGoBack()) {
+          getCurrentWebView().goBack();
+        }
+      });
+
+      tabDrawerLeft.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+      tabDrawerLeft.setAdapter(tabDrawerAdapter);
+      tableDrawerRight.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+
+      TableDrawerAdapter tableDrawerAdapter = new TableDrawerAdapter();
+      tableDrawerRight.setAdapter(tableDrawerAdapter);
+      tableDrawerAdapter.setTableClickListener(new TableClickListener() {
+        @Override
+        public void onHeaderClick(View view) {
+          getCurrentWebView().setScrollY(0);
+          drawerLayout.closeDrawer(GravityCompat.END);
+        }
+
+        @Override
+        public void onSectionClick(View view, int position) {
+          getCurrentWebView().loadUrl("javascript:document.getElementById('"
+              + documentSections.get(position).id
+              + "').scrollIntoView();");
+
+          drawerLayout.closeDrawers();
+        }
+      });
+
+      tableDrawerAdapter.notifyDataSetChanged();
+
+      tabDrawerAdapter.setTabClickListener(new TabDrawerAdapter.TabClickListener() {
+        @Override
+        public void onSelectTab(View view, int position) {
+          selectTab(position);
+
+          /* Bug Fix
+           * Issue #592 in which the navigational history of the previously open tab (WebView) was
+           * carried forward to the newly selected/opened tab; causing erroneous enabling of
+           * navigational buttons.
+           */
+          refreshNavigationButtons();
+        }
+
+        @Override
+        public void onCloseTab(View view, int position) {
+          closeTab(position);
+        }
+      });
+
+
+      return view;
+    }
+
+    @Override
+    public void onShowTab(@NonNull final Context context,
+                          @NonNull final TabSwitcher tabSwitcher, @NonNull final View view,
+                          @NonNull final Tab tab, final int index, final int viewType,
+                          @Nullable final Bundle savedInstanceState) {
+      TextView textView = findViewById(android.R.id.title);
+      textView.setText(tab.getTitle());
+      toolbar = findViewById(R.id.toolbar);
+      toolbar.setVisibility(tabSwitcher.isSwitcherShown() ? View.GONE : View.VISIBLE);
+    }
+  }
 }

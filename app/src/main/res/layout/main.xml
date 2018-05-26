@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
   android:id="@+id/snackbar_layout"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
@@ -68,6 +69,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
+            tools:visibility="visible"
             android:visibility="gone"
             android:weightSum="1.0">
 
@@ -128,13 +130,29 @@
     android:layout_width="match_parent"
     android:layout_height="?actionBarSize">
 
-    <android.support.v7.widget.Toolbar
-      android:id="@+id/toolbar"
+    <FrameLayout
       android:layout_width="match_parent"
-      android:layout_height="?actionBarSize"
-      android:background="?colorPrimaryDark"
-      app:popupTheme="@style/AppTheme.PopupOverlay"
-      app:theme="@style/AppTheme.AppBarOverlay" />
+      android:layout_height="?attr/actionBarSize">
+
+      <TextView
+        android:id="@android:id/title"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:ellipsize="marquee"
+        android:gravity="center_vertical"
+        android:singleLine="true"
+        android:textAppearance="@style/TextAppearance.Widget.AppCompat.Toolbar.Title" />
+
+      <de.mrapp.android.util.view.UnfocusableToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent"
+        android:focusable="false"
+        android:theme="?attr/toolbarTheme"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+
+    </FrameLayout>
 
     <org.kiwix.kiwixmobile.views.AnimatedProgressBar
       android:id="@+id/progress_view"
