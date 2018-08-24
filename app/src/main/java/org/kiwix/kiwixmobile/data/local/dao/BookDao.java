@@ -24,12 +24,13 @@ import com.yahoo.squidb.sql.Query;
 import org.kiwix.kiwixmobile.data.local.KiwixDatabase;
 import org.kiwix.kiwixmobile.data.local.entity.BookDatabaseEntity;
 import org.kiwix.kiwixmobile.library.entity.LibraryNetworkEntity.Book;
-import org.kiwix.kiwixmobile.utils.files.FileUtils;
 
 import java.io.File;
 import java.util.ArrayList;
 
 import javax.inject.Inject;
+
+import static org.kiwix.kiwixmobile.downloader.ChunkUtils.hasParts;
 
 /**
  * Dao class for books
@@ -90,14 +91,14 @@ public class BookDao {
     return filterBookResults(books);
   }
 
-  public ArrayList<Book> filterBookResults(ArrayList<Book> books) {
+  private ArrayList<Book> filterBookResults(ArrayList<Book> books) {
     ArrayList<Book> filteredBookList = new ArrayList<>();
     for (Book book : books) {
-      if (!FileUtils.hasPart(book.file)) {
+      if (!hasParts(book.file)) {
         if (book.file.exists()) {
           filteredBookList.add(book);
         } else {
-          kiwixDatabase.deleteWhere(BookDatabaseEntity.class, BookDatabaseEntity.URL.eq(book.file.getPath()));
+          kiwixDatabase.deleteWhere(BookDatabaseEntity.class, BookDatabaseEntity.URL.eq(book.file));
         }
       }
     }
@@ -112,7 +113,7 @@ public class BookDao {
         Book book = new Book();
         setBookDetails(book, bookCursor);
         book.remoteUrl = bookCursor.get(BookDatabaseEntity.REMOTE_URL);
-        if (FileUtils.hasPart(book.file)) {
+        if (!hasParts(book.file)) {
           books.add(book);
         }
       }

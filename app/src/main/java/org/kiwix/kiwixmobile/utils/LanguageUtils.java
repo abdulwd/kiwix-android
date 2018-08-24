@@ -107,10 +107,10 @@ public class LanguageUtils {
     return mLocaleMap.get(iso3.toUpperCase());
   }
 
-  public static Locale getCurrentLocale(Context context){
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N){
+  public static Locale getCurrentLocale(Context context) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
       return context.getResources().getConfiguration().getLocales().get(0);
-    } else{
+    } else {
       //noinspection deprecation
       return context.getResources().getConfiguration().locale;
     }
@@ -118,7 +118,7 @@ public class LanguageUtils {
 
   // This method will determine which font will be applied to the not-supported-locale.
   // You can define exceptions to the default DejaVu font in the 'exceptions' Hashmap:
-  public static String getTypeface(String languageCode) {
+  static String getTypeface(String languageCode) {
 
     // Define the exceptions to the rule. The font has to be placed in the assets folder.
     // Key: the language code; Value: the name of the font.
@@ -149,6 +149,21 @@ public class LanguageUtils {
 
     // Return the default font
     return "fonts/DejaVuSansCondensed.ttf";
+  }
+
+  public static String getResourceString(Context appContext, String str) {
+    String resourceName = str;
+    if (resourceName.contains("REPLACE_")) {
+      resourceName = resourceName.replace("REPLACE_", "");
+    }
+    int resourceId = appContext.getResources()
+        .getIdentifier(
+            resourceName,
+            "string",
+            appContext.getPackageName()
+        );
+    String resourceString = appContext.getResources().getString(resourceId);
+    return resourceString != null ? resourceString : str;
   }
 
   // Read the language codes, that are supported in this app from the locales.txt file
@@ -255,7 +270,7 @@ public class LanguageUtils {
 
     private LayoutInflater mLayoutInflater;
 
-    public LayoutInflaterFactory(Context context, LayoutInflater layoutInflater) {
+    LayoutInflaterFactory(Context context, LayoutInflater layoutInflater) {
       mContext = context;
       mLayoutInflater = layoutInflater;
     }

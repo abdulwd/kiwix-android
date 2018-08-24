@@ -20,6 +20,7 @@ package org.kiwix.kiwixmobile.main;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Typeface;
+import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
@@ -45,17 +46,19 @@ public class TableDrawerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
   private int selectedPosition = 0;
 
-  public TableDrawerAdapter() {
+  TableDrawerAdapter() {
     sections = new ArrayList<>();
   }
 
-  @Override public int getItemViewType(int position) {
+  @Override
+  public int getItemViewType(int position) {
     if (position == 0) return 0;
     return 1;
   }
 
+  @NonNull
   @Override
-  public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+  public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
     int resource = R.layout.section_list;
     Context context = parent.getContext();
     View v = LayoutInflater.from(context).inflate(resource, parent, false);
@@ -72,7 +75,7 @@ public class TableDrawerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
   }
 
   @Override
-  public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
+  public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
     ViewHolder vh = (ViewHolder) holder;
 
     Context context = holder.itemView.getContext();
@@ -85,6 +88,9 @@ public class TableDrawerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         vh.title.setText(title);
       } else {
         String empty = context.getString(R.string.no_section_info);
+        if (context instanceof MainActivity) {
+          empty = ((MainActivity) context).getCurrentWebView().getTitle();
+        }
         vh.title.setText(empty);
       }
       vh.itemView.setOnClickListener(v -> {
@@ -142,7 +148,8 @@ public class TableDrawerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
   }
 
   public static class ViewHolder extends RecyclerView.ViewHolder {
-    public @BindView(R.id.titleText) TextView title;
+    @BindView(R.id.titleText)
+    public TextView title;
 
     public ViewHolder(View v) {
       super(v);
@@ -152,14 +159,14 @@ public class TableDrawerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
   public static class HeaderViewHolder extends ViewHolder {
 
-    public HeaderViewHolder(View v) {
+    HeaderViewHolder(View v) {
       super(v);
     }
   }
 
   public static class SectionViewHolder extends ViewHolder {
 
-    public SectionViewHolder(View v) {
+    SectionViewHolder(View v) {
       super(v);
     }
   }

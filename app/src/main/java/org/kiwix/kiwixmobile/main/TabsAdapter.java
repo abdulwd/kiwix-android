@@ -39,6 +39,7 @@ import static org.kiwix.kiwixmobile.utils.DimenUtils.getToolbarHeight;
 import static org.kiwix.kiwixmobile.utils.DimenUtils.getWindowHeight;
 import static org.kiwix.kiwixmobile.utils.DimenUtils.getWindowWidth;
 import static org.kiwix.kiwixmobile.utils.ImageUtils.getBitmapFromView;
+import static org.kiwix.kiwixmobile.utils.LanguageUtils.getResourceString;
 import static org.kiwix.kiwixmobile.utils.StyleUtils.fromHtml;
 
 public class TabsAdapter extends RecyclerView.Adapter<TabsAdapter.ViewHolder> {
@@ -113,7 +114,13 @@ public class TabsAdapter extends RecyclerView.Adapter<TabsAdapter.ViewHolder> {
     if (webView.getParent() != null) {
       ((ViewGroup) webView.getParent()).removeView(webView);
     }
-    holder.title.setText(fromHtml(webView.getTitle()));
+    if (webView.getTitle() != null) {
+      String webViewTitle = fromHtml(webView.getTitle()).toString();
+      if (webViewTitle.contains("REPLACE_")) {
+        webViewTitle = getResourceString(activity, webViewTitle);
+      }
+      holder.title.setText(webViewTitle);
+    }
     holder.close.setOnClickListener(v -> listener.onCloseTab(v, holder.getAdapterPosition()));
     holder.content.setImageBitmap(getBitmapFromView(webView));
     holder.content.setOnClickListener(v -> {

@@ -27,15 +27,14 @@ import android.provider.DocumentsContract;
 import android.util.Log;
 
 import org.kiwix.kiwixmobile.BuildConfig;
-import org.kiwix.kiwixmobile.library.entity.LibraryNetworkEntity.Book;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
+import static org.kiwix.kiwixmobile.downloader.ChunkUtils.deleteAllParts;
 import static org.kiwix.kiwixmobile.utils.Constants.TAG_KIWIX;
 
 public class FileUtils {
@@ -60,38 +59,8 @@ public class FileUtils {
     }
   }
 
-  public static synchronized void deleteZimFile(String path) {
-    if (path.substring(path.length() - 5).equals(".part")) {
-      path = path.substring(0, path.length() - 5);
-    }
-    Log.i("kiwix", "Deleting file: " + path);
-    File file = new File(path);
-    if (!file.getPath().substring(file.getPath().length() - 3).equals("zim")) {
-      fileloop:
-      for (char alphabetFirst = 'a'; alphabetFirst <= 'z'; alphabetFirst++) {
-        for (char alphabetSecond = 'a'; alphabetSecond <= 'z'; alphabetSecond++) {
-          String chunkPath = path.substring(0, path.length() - 2) + alphabetFirst + alphabetSecond;
-          File fileChunk = new File(chunkPath);
-          if (fileChunk.exists()) {
-            fileChunk.delete();
-          } else if (!deleteZimFileParts(chunkPath)) {
-            break fileloop;
-          }
-        }
-      }
-    } else {
-      file.delete();
-      deleteZimFileParts(path);
-    }
-  }
-
-  private static synchronized boolean deleteZimFileParts(String path) {
-    File file = new File(path + ".part");
-    if (file.exists()) {
-      file.delete();
-      return true;
-    }
-    return false;
+  public static synchronized void deleteZimFile(File file) {
+    deleteAllParts(file);
   }
 
   /**
@@ -112,7 +81,7 @@ public class FileUtils {
     return getSaveFilePath() + File.separator + fileName;
   }
 
-  static public String getSaveFilePath() {
+  private static String getSaveFilePath() {
     String obbFolder = File.separator + "Android" + File.separator + "obb" + File.separator;
     File root = Environment.getExternalStorageDirectory();
     return root.toString() + obbFolder + BuildConfig.APPLICATION_ID;
@@ -206,35 +175,10 @@ public class FileUtils {
       stream.read(buffer);
       stream.close();
       content = new String(buffer);
-    } catch (IOException ignored) { }
+    } catch (IOException ignored) {
+    }
 
     return readCsv(content);
-  }
-
-  public static List<File> getAllZimParts(Book book) {
-    List<File> files = new ArrayList<>();
-    if(book.file.getPath().endsWith(".zim") || book.file.getPath().endsWith(".zim.part")) {
-      if(book.file.exists()) {
-        files.add(book.file);
-      } else {
-        files.add(new File(book.file + ".part"));
-      }
-      return files;
-    }
-    String path = book.file.getPath();
-    for(char alphabetFirst = 'a'; alphabetFirst <= 'z'; alphabetFirst++) {
-      for(char alphabetSecond = 'a'; alphabetSecond <= 'z'; alphabetSecond++) {
-        path = path.substring(0, path.length() - 2) + alphabetFirst + alphabetSecond;
-        if(new File(path).exists()) {
-          files.add(new File(path));
-        } else if(new File(path + ".part").exists()) {
-          files.add(new File(path + ".part"));
-        } else {
-          return files;
-        }
-      }
-    }
-    return files;
   }
 
   private static ArrayList<String> readCsv(String csv) {
@@ -242,48 +186,4 @@ public class FileUtils {
     String[] csvArray = csv.split(",");
     return new ArrayList<>(Arrays.asList(csvArray));
   }
-
-  public static boolean hasPart(File file) {
-    file = new File(getFileName(file.getPath()));
-    if (file.getPath().endsWith(".zim")) {
-      return false;
-    }
-    if (file.getPath().endsWith(".part")) {
-      return true;
-    }
-    String path = file.getPath();
-
-    for (char alphabetFirst = 'a'; alphabetFirst <= 'z'; alphabetFirst++) {
-      for (char alphabetSecond = 'a'; alphabetSecond <= 'z'; alphabetSecond++) {
-        String chunkPath = path.substring(0, path.length() - 2) + alphabetFirst + alphabetSecond;
-        File fileChunk = new File(chunkPath + ".part");
-        if (fileChunk.exists()) {
-          return true;
-        } else if (!new File(chunkPath).exists()) {
-          return false;
-        }
-      }
-    }
-    return false;
-  }
-
-  public static String getFileName (String fileName) {
-    if (new File(fileName).exists()) {
-      return fileName;
-    } else if (new File(fileName + ".part").exists()) {
-      return fileName + ".part";
-    } else {
-      return fileName + "aa";
-    }
-  }
-
-  public static long getCurrentSize(Book book) {
-    long size = 0;
-    List<File> files = getAllZimParts(book);
-    for (File file : files) {
-      size += file.length();
-    }
-    return size;
-  }
-
 }

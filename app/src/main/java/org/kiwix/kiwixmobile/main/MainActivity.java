@@ -112,8 +112,8 @@ import butterknife.OnLongClick;
 
 import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
 import static android.os.Build.VERSION_CODES;
+import static org.kiwix.kiwixmobile.downloader.ChunkUtils.getFileName;
 import static org.kiwix.kiwixmobile.main.TableDrawerAdapter.DocumentSection;
-import static org.kiwix.kiwixmobile.main.TableDrawerAdapter.TableClickListener;
 import static org.kiwix.kiwixmobile.search.SearchActivity.EXTRA_SEARCH_IN_TEXT;
 import static org.kiwix.kiwixmobile.utils.Constants.BOOKMARK_CHOSEN_REQUEST;
 import static org.kiwix.kiwixmobile.utils.Constants.EXTRA_CHOSE_X_TITLE;
@@ -140,7 +140,9 @@ import static org.kiwix.kiwixmobile.utils.Constants.TAG_CURRENT_POSITIONS;
 import static org.kiwix.kiwixmobile.utils.Constants.TAG_CURRENT_TAB;
 import static org.kiwix.kiwixmobile.utils.Constants.TAG_FILE_SEARCHED;
 import static org.kiwix.kiwixmobile.utils.Constants.TAG_KIWIX;
+import static org.kiwix.kiwixmobile.utils.LanguageUtils.getResourceString;
 import static org.kiwix.kiwixmobile.utils.StyleUtils.dialogStyle;
+import static org.kiwix.kiwixmobile.utils.UpdateUtils.reformatProviderUrl;
 
 public class MainActivity extends BaseActivity implements WebViewCallback,
     MainContract.View, BooksAdapter.OnItemClickListener {
@@ -272,6 +274,7 @@ public class MainActivity extends BaseActivity implements WebViewCallback,
       presenter.saveBooks(newBooks);
     }
   });
+  private boolean bookmarkTabEnabled;
 
   private static void updateWidgets(Context context) {
     Intent intent = new Intent(context.getApplicationContext(), KiwixSearchWidget.class);
@@ -320,6 +323,7 @@ public class MainActivity extends BaseActivity implements WebViewCallback,
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    new WebView(this).destroy(); // Workaround for buggy webviews see #710
     presenter.attachView(this);
     wifiOnly = sharedPreferenceUtil.getPrefWifiOnly();
     nightMode = sharedPreferenceUtil.nightMode();
@@ -346,25 +350,8 @@ public class MainActivity extends BaseActivity implements WebViewCallback,
 
     tableDrawerRight.setLayoutManager(new LinearLayoutManager(this));
 
-    TableDrawerAdapter tableDrawerAdapter = new TableDrawerAdapter();
+    TableDrawerAdapter tableDrawerAdapter = setupTableDrawerAdapter();
     tableDrawerRight.setAdapter(tableDrawerAdapter);
-    tableDrawerAdapter.setTableClickListener(new TableClickListener() {
-      @Override
-      public void onHeaderClick(View view) {
-        getCurrentWebView().setScrollY(0);
-        drawerLayout.closeDrawer(GravityCompat.END);
-      }
-
-      @Override
-      public void onSectionClick(View view, int position) {
-        getCurrentWebView().loadUrl("javascript:document.getElementById('"
-            + documentSections.get(position).id
-            + "').scrollIntoView();");
-
-        drawerLayout.closeDrawers();
-      }
-    });
-
     tableDrawerAdapter.notifyDataSetChanged();
 
     tabsAdapter.setTabClickListener(new TabsAdapter.TabClickListener() {
@@ -391,8 +378,17 @@ public class MainActivity extends BaseActivity implements WebViewCallback,
     documentParser = new DocumentParser(new DocumentParser.SectionsListener() {
       @Override
       public void sectionsLoaded(String title, List<DocumentSection> sections) {
+        for (DocumentSection section : sections) {
+          if (section.title.contains("REPLACE_")) {
+            section.title = getResourceString(getApplicationContext(), section.title);
+          }
+        }
         documentSections.addAll(sections);
-        tableDrawerAdapter.setTitle(title);
+        if (title.contains("REPLACE_")) {
+          tableDrawerAdapter.setTitle(getResourceString(getApplicationContext(), title));
+        } else {
+          tableDrawerAdapter.setTitle(title);
+        }
         tableDrawerAdapter.setSections(documentSections);
         tableDrawerAdapter.notifyDataSetChanged();
       }
@@ -425,7 +421,7 @@ public class MainActivity extends BaseActivity implements WebViewCallback,
       getCurrentWebView().loadUrl(i.getStringExtra(EXTRA_CHOSE_X_TITLE));
     }
     if (i.hasExtra(EXTRA_ZIM_FILE)) {
-      File file = new File(FileUtils.getFileName(i.getStringExtra(EXTRA_ZIM_FILE)));
+      File file = new File(getFileName(i.getStringExtra(EXTRA_ZIM_FILE)));
       LibraryFragment.mService.cancelNotification(i.getIntExtra(EXTRA_NOTIFICATION_ID, 0));
       Uri uri = Uri.fromFile(file);
 
@@ -521,6 +517,29 @@ public class MainActivity extends BaseActivity implements WebViewCallback,
         && NetworkUtils.isNetworkAvailable(this) && !BuildConfig.DEBUG) {
       showRateDialog();
     }
+  }
+
+  private TableDrawerAdapter setupTableDrawerAdapter() {
+    TableDrawerAdapter tableDrawerAdapter = new TableDrawerAdapter();
+
+    tableDrawerAdapter.setTableClickListener(new TableDrawerAdapter.TableClickListener() {
+      @Override
+      public void onHeaderClick(View view) {
+        getCurrentWebView().setScrollY(0);
+        drawerLayout.closeDrawer(GravityCompat.END);
+      }
+
+      @Override
+      public void onSectionClick(View view, int position) {
+        getCurrentWebView().loadUrl("javascript:document.getElementById('"
+            + documentSections.get(position).id
+            + "').scrollIntoView();");
+
+        drawerLayout.closeDrawers();
+      }
+    });
+
+    return tableDrawerAdapter;
   }
 
   private void showRateDialog() {
@@ -750,7 +769,7 @@ public class MainActivity extends BaseActivity implements WebViewCallback,
     }
   }
 
-  private KiwixWebView getCurrentWebView() {
+  KiwixWebView getCurrentWebView() {
     if (webViewList.size() == 0) return newTab();
     if (currentWebViewIndex < webViewList.size()) {
       return webViewList.get(currentWebViewIndex);
@@ -1091,6 +1110,9 @@ public class MainActivity extends BaseActivity implements WebViewCallback,
 
   @OnClick(R.id.bottom_toolbar_bookmark)
   public void toggleBookmark() {
+    if (!bookmarkTabEnabled) {
+      return;
+    }
     //Check maybe need refresh
     String articleUrl = getCurrentWebView().getUrl();
     boolean isBookmark = false;
@@ -1192,6 +1214,9 @@ public class MainActivity extends BaseActivity implements WebViewCallback,
           goToSearch(true);
           break;
         case Intent.ACTION_VIEW: {
+          if (!(intent.getType() == null || !intent.getType().equals("application/octet-stream"))) {
+            break;
+          }
           final String zimFile = ZimContentProvider.getZimFile();
           saveTabStates();
           Intent i = new Intent(MainActivity.this, SearchActivity.class);
@@ -1505,8 +1530,10 @@ public class MainActivity extends BaseActivity implements WebViewCallback,
         !getCurrentWebView().getUrl().equals(HOME_URL)) {
       int icon = bookmarks.contains(getCurrentWebView().getUrl()) ? R.drawable.ic_bookmark_24dp : R.drawable.ic_bookmark_border_24dp;
       bottomToolbarBookmark.setImageResource(icon);
+      bookmarkTabEnabled = true;
     } else {
       bottomToolbarBookmark.setImageResource(R.drawable.ic_bookmark_border_24dp);
+      bookmarkTabEnabled = false;
     }
   }
 
@@ -1602,11 +1629,11 @@ public class MainActivity extends BaseActivity implements WebViewCallback,
       JSONArray urls = new JSONArray(zimArticles);
       JSONArray positions = new JSONArray(zimPositions);
       int i = 0;
-      getCurrentWebView().loadUrl(urls.getString(i));
+      getCurrentWebView().loadUrl(reformatProviderUrl(urls.getString(i)));
       getCurrentWebView().setScrollY(positions.getInt(i));
       i++;
       for (; i < urls.length(); i++) {
-        newTab(urls.getString(i));
+        newTab(reformatProviderUrl(urls.getString(i)));
         getCurrentWebView().setScrollY(positions.getInt(i));
       }
       selectTab(currentTab);

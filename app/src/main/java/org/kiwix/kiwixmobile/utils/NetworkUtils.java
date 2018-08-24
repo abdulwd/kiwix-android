@@ -69,7 +69,9 @@ public class NetworkUtils {
   }
 
   public static String getFileNameFromUrl(String url) {
-
+    if (url == null) {
+      url = "";
+    }
     int index = url.lastIndexOf('?');
     String filename;
     if (index > 1) {

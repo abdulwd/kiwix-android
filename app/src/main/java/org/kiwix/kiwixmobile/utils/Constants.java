@@ -17,6 +17,8 @@
  */
 package org.kiwix.kiwixmobile.utils;
 
+import org.kiwix.kiwixmobile.BuildConfig;
+
 public final class Constants {
 
     public static final String TAG_KIWIX = "kiwix";
@@ -125,4 +127,7 @@ public final class Constants {
     // Notification Channel Constants
     public static final String ONGOING_DOWNLOAD_CHANNEL_ID = "ongoing_downloads_channel_id";
 
+    static final String OLD_PROVIDER_DOMAIN = "org.kiwix.zim.base";
+
+    static final String NEW_PROVIDER_DOMAIN = BuildConfig.APPLICATION_ID + ".zim.base";
 }

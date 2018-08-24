@@ -71,12 +71,12 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okio.BufferedSource;
 
+import static org.kiwix.kiwixmobile.downloader.ChunkUtils.getCurrentSize;
 import static org.kiwix.kiwixmobile.utils.Constants.EXTRA_BOOK;
 import static org.kiwix.kiwixmobile.utils.Constants.EXTRA_LIBRARY;
 import static org.kiwix.kiwixmobile.utils.Constants.EXTRA_NOTIFICATION_ID;
 import static org.kiwix.kiwixmobile.utils.Constants.EXTRA_ZIM_FILE;
 import static org.kiwix.kiwixmobile.utils.Constants.ONGOING_DOWNLOAD_CHANNEL_ID;
-import static org.kiwix.kiwixmobile.utils.files.FileUtils.getCurrentSize;
 
 public class DownloadService extends Service {
 
@@ -596,10 +596,10 @@ public class DownloadService extends Service {
           Log.i(KIWIX_TAG, "Download Cancelled, deleting file: " + path);
           if (path.substring(path.length() - 8).equals("zim.part")) {
             path = path.substring(0, path.length() - 5);
-            FileUtils.deleteZimFile(path);
+            FileUtils.deleteZimFile(file);
           } else {
             path = path.substring(0, path.length() - 7) + "aa";
-            FileUtils.deleteZimFile(path);
+            FileUtils.deleteZimFile(file);
           }
         } else {
           Log.i(KIWIX_TAG, "Download completed, renaming file ([" + file.getPath() + "] -> .zim)");
